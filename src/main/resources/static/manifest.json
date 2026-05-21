@@ -1,0 +1,11 @@
+{
+  "name": "Floriani Tracker",
+  "short_name": "Tracker",
+  "description": "Sammelkarte für Feuerwehraktionen",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#b30000",
+  "orientation": "portrait",
+  "icons": []
+}

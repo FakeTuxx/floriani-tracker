@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: floriani-tracker
+    runtime: docker
+    plan: starter
+    healthCheckPath: /
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: SPRING_DATASOURCE_DRIVER
+        value: org.postgresql.Driver
+      - key: H2_CONSOLE_ENABLED
+        value: false
+      - key: APP_DEMO_DATA_ENABLED
+        value: false
+      - key: SESSION_COOKIE_SECURE
+        value: true
+      - key: JPA_DDL_AUTO
+        value: update
+      - key: APP_SUPER_ADMIN_USERNAME
+        sync: false
+      - key: APP_SUPER_ADMIN_PASSWORD
+        sync: false
+      - key: APP_SUPER_ADMIN_DISPLAY_NAME
+        value: System Admin

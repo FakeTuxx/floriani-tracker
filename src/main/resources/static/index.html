@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Floriani Tracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#b40012">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<section id="loginView" class="login-view">
+    <div class="login-card">
+        <div class="brand-mark">🚒</div>
+        <p class="eyebrow">Floriani Tracker</p>
+        <h1>Anmelden</h1>
+        <p class="muted">Melde dich mit den Zugangsdaten deiner Feuerwehr an. Danach werden automatisch Gemeinde, Feuerwehr und Sammellisten geladen.</p>
+
+        <form id="loginForm" class="login-form">
+            <label for="usernameInput">Benutzername</label>
+            <input id="usernameInput" autocomplete="username" placeholder="z.B. wundschuh" required>
+
+            <label for="passwordInput">Passwort</label>
+            <input id="passwordInput" type="password" autocomplete="current-password" placeholder="Passwort" required>
+
+            <button type="submit">Einloggen</button>
+        </form>
+
+        <p id="loginMessage" class="login-message"></p>
+
+        <div class="demo-box">
+            <strong>Testzugänge:</strong><br>
+            Passwort immer: <code>floriani2026</code><br>
+            Super-Admin: <code>admin</code> / <code>admin2026</code><br>
+            Feuerwehr-Beispiele: <code>wundschuh</code>, <code>graz</code>, <code>leibnitz</code>, <code>gleisdorf</code>, <code>weiz</code>, <code>premstaetten</code>, <code>muerzzuschlag</code>
+        </div>
+    </div>
+</section>
+
+
+<section id="adminView" class="admin-view hidden">
+    <header class="topbar admin-topbar">
+        <div>
+            <p class="eyebrow">Super-Admin</p>
+            <h1>Floriani Tracker Verwaltung</h1>
+            <p>Feuerwehren anlegen, Zugänge verwalten und Abos steuern.</p>
+        </div>
+        <button id="adminLogoutButton" class="ghost-button">Abmelden</button>
+    </header>
+
+    <main class="admin-shell">
+        <section class="summary-grid">
+            <article class="summary-card primary"><span>Feuerwehren</span><strong id="adminStatDepartments">0</strong></article>
+            <article class="summary-card success"><span>Aktive Zugänge</span><strong id="adminStatActive">0</strong></article>
+            <article class="summary-card danger"><span>Gesperrt / abgelaufen</span><strong id="adminStatBlocked">0</strong></article>
+            <article class="summary-card"><span>Häuser gesamt</span><strong id="adminStatHouses">0</strong></article>
+        </section>
+
+        <section class="admin-card">
+            <div class="admin-card-head">
+                <div>
+                    <p class="eyebrow">Neuer Kunde</p>
+                    <h2>Feuerwehr anlegen</h2>
+                    <p class="muted">Hier legst du eine Feuerwehr samt Gemeinde und erstem Admin-Zugang an. Die Feuerwehr sieht später nur ihre eigenen Listen.</p>
+                </div>
+            </div>
+            <div class="admin-form-grid">
+                <label>Feuerwehrname<input id="adminFdName" placeholder="z.B. FF Musterstadt"></label>
+                <label>Gemeinde<input id="adminMunicipality" placeholder="z.B. Musterstadt"></label>
+                <label>Bezirk<input id="adminDistrict" placeholder="z.B. Graz-Umgebung"></label>
+                <label>Bundesland<input id="adminState" value="Steiermark"></label>
+                <label>Gemeindekennziffer<input id="adminGkz" placeholder="optional"></label>
+                <label>Breitengrad<input id="adminLat" type="number" step="0.000001" placeholder="optional"></label>
+                <label>Längengrad<input id="adminLon" type="number" step="0.000001" placeholder="optional"></label>
+                <label>Standard-Liste<input id="adminDefaultList" value="Florianisammlung 2026"></label>
+                <label>Admin-Benutzername<input id="adminUsername" placeholder="z.B. ff-musterstadt"></label>
+                <label>Admin-Passwort<input id="adminPassword" value="floriani2026"></label>
+                <label>Ansprechpartner<input id="adminContactName" placeholder="optional"></label>
+                <label>E-Mail<input id="adminContactEmail" placeholder="optional"></label>
+                <label>Abo-Status
+                    <select id="adminSubscriptionStatus">
+                        <option value="TEST">TEST</option>
+                        <option value="ACTIVE">ACTIVE</option>
+                        <option value="EXPIRED">EXPIRED</option>
+                        <option value="BLOCKED">BLOCKED</option>
+                    </select>
+                </label>
+                <label>Abo gültig bis<input id="adminValidUntil" type="date"></label>
+                <label class="wide">Interne Notiz<input id="adminInternalNote" placeholder="z.B. Rechnung gesendet, Testkunde, Ansprechpartner..."></label>
+            </div>
+            <div class="admin-actions">
+                <button id="adminCreateDepartmentButton" class="red-button">Feuerwehr + Zugang erstellen</button>
+                <button id="adminReloadButton" class="light-button">Übersicht neu laden</button>
+            </div>
+            <p id="adminCreateMessage" class="login-message"></p>
+        </section>
+
+        <section class="admin-card">
+            <div class="admin-card-head">
+                <div>
+                    <p class="eyebrow">Kundenübersicht</p>
+                    <h2>Feuerwehren</h2>
+                </div>
+                <input id="adminSearch" class="admin-search" placeholder="Feuerwehr suchen...">
+            </div>
+            <div id="adminDepartmentList" class="admin-department-list"></div>
+        </section>
+    </main>
+</section>
+
+<section id="appView" class="app-view hidden">
+    <header class="topbar">
+        <div>
+            <p class="eyebrow">Aktive Feuerwehr</p>
+            <h1 id="departmentName">-</h1>
+            <p id="municipalityInfo">-</p>
+        </div>
+        <button id="menuButton" class="menu-button" aria-label="Menü öffnen" aria-expanded="false">
+            <span></span><span></span><span></span>
+        </button>
+    </header>
+
+    <main class="map-app-shell">
+        <section class="list-control-card">
+            <div>
+                <p class="eyebrow">Aktuelle Sammelliste</p>
+                <h2 id="activeListTitle">Keine Liste ausgewählt</h2>
+                <p id="listHint">Liste auswählen oder neue Liste erstellen.</p>
+            </div>
+            <label class="list-picker-label">
+                Liste wechseln
+                <select id="listSelect"></select>
+            </label>
+        </section>
+
+        <section id="loadingBanner" class="loading-banner hidden" aria-live="polite">
+            <div class="spinner"></div>
+            <div>
+                <strong>Häuser laden ...</strong>
+                <p id="loadingText">Bitte warten, die Adressen der Gemeinde werden geladen.</p>
+            </div>
+        </section>
+
+        <section class="summary-grid compact-summary">
+            <article class="summary-card primary">
+                <span>Gesammelt</span>
+                <strong id="statMoney">0,00 €</strong>
+            </article>
+            <article class="summary-card">
+                <span>Fortschritt</span>
+                <strong id="statProgress">0 %</strong>
+            </article>
+            <article class="summary-card danger">
+                <span>Offen</span>
+                <strong id="statOpen">0</strong>
+            </article>
+            <article class="summary-card success">
+                <span>Erledigt</span>
+                <strong id="statDone">0</strong>
+            </article>
+        </section>
+
+        <section id="mapSection" class="map-section always-map">
+            <div id="map"></div>
+        </section>
+    </main>
+</section>
+
+<aside id="sideMenu" class="side-menu hidden" aria-label="Funktionsmenü">
+    <div class="side-menu-panel">
+        <div class="side-menu-head">
+            <div>
+                <p class="eyebrow">Menü</p>
+                <h2>Funktionen</h2>
+            </div>
+            <button id="closeMenuButton" class="icon-button" aria-label="Menü schließen">×</button>
+        </div>
+        <button id="openCreateListButton" class="menu-action primary-action">+ Liste erstellen</button>
+        <button id="openDuplicateListButton" class="menu-action">Liste fürs neue Jahr duplizieren</button>
+        <button id="openListButton" class="menu-action">Liste anzeigen</button>
+        <button id="openPdfButton" class="menu-action">PDF-Seite öffnen</button>
+        <button id="excelExportButton" class="menu-action">Excel-Export herunterladen</button>
+        <button id="importButton" class="menu-action">Häuser neu laden / ergänzen</button>
+        <button id="openPasswordButton" class="menu-action">Passwort ändern</button>
+        <button id="logoutButton" class="menu-action danger-action">Abmelden</button>
+    </div>
+</aside>
+
+<section id="listOverlay" class="list-overlay hidden" aria-label="Hausliste">
+    <div class="list-overlay-panel">
+        <div class="overlay-head">
+            <div>
+                <p class="eyebrow" id="overlayModeLabel">Hausliste</p>
+                <h2 id="overlayTitle">Liste</h2>
+                <p id="houseCountText">Wähle zuerst eine Sammelliste aus.</p>
+            </div>
+            <button id="closeListOverlayButton" class="icon-button" aria-label="Liste schließen">×</button>
+        </div>
+
+        <div class="overlay-view-switch">
+            <button id="listViewButton" class="switch-button active">Normale Liste</button>
+            <button id="pdfViewButton" class="switch-button">PDF-Seite</button>
+            <button id="printPdfButton" class="red-button small hidden">PDF-Seite öffnen / drucken</button>
+            <button id="excelOverlayButton" class="light-button small">Excel-Export</button>
+        </div>
+
+        <div id="filterArea" class="filter-area">
+            <div class="filter-grid">
+                <label class="wide">
+                    Suche
+                    <input id="searchInput" placeholder="Straße, Hausnummer, Name, Notiz...">
+                </label>
+                <label>
+                    Status
+                    <select id="statusFilter">
+                        <option value="ALL">Alle</option>
+                        <option value="OFFEN">Offen</option>
+                        <option value="SPAETER_NOCHMAL">Später nochmal</option>
+                        <option value="ERLEDIGT">Erledigt</option>
+                        <option value="UEBERSPRINGEN">Überspringen</option>
+                    </select>
+                </label>
+                <label>
+                    Geld
+                    <select id="moneyFilter">
+                        <option value="ALL">Alle</option>
+                        <option value="WITH_MONEY">Mit Betrag</option>
+                        <option value="WITHOUT_MONEY">Ohne Betrag</option>
+                        <option value="MIN">Mindestens Betrag</option>
+                        <option value="MAX">Höchstens Betrag</option>
+                    </select>
+                </label>
+                <label>
+                    Betrag €
+                    <input id="moneyValue" type="number" min="0" step="0.5" placeholder="z.B. 50">
+                </label>
+                <label>
+                    Sortierung
+                    <select id="sortSelect">
+                        <option value="ADDRESS_ASC">Adresse A-Z</option>
+                        <option value="STATUS_ASC">Status</option>
+                        <option value="MONEY_DESC">Geld absteigend</option>
+                        <option value="MONEY_ASC">Geld aufsteigend</option>
+                        <option value="UPDATED_DESC">Zuletzt bearbeitet</option>
+                    </select>
+                </label>
+            </div>
+        </div>
+
+        <div id="houseList" class="house-list"></div>
+    </div>
+</section>
+
+<section id="createListModal" class="modal-overlay hidden" aria-label="Liste erstellen">
+    <div class="modal-card">
+        <div class="modal-head">
+            <div>
+                <p class="eyebrow">Neue Sammelliste</p>
+                <h2>Liste erstellen</h2>
+            </div>
+            <button id="closeCreateListButton" class="icon-button" aria-label="Popup schließen">×</button>
+        </div>
+        <p class="muted small-info">Nach dem Erstellen werden die Häuser der Gemeinde automatisch geladen.</p>
+        <label>
+            Name der Liste
+            <input id="newListName" placeholder="z.B. Florianisammlung 2026">
+        </label>
+        <div class="modal-actions">
+            <button id="cancelCreateListButton" class="light-button">Abbrechen</button>
+            <button id="createListButton" class="red-button">Erstellen</button>
+        </div>
+    </div>
+</section>
+
+<section id="duplicateListModal" class="modal-overlay hidden" aria-label="Liste duplizieren">
+    <div class="modal-card">
+        <div class="modal-head">
+            <div>
+                <p class="eyebrow">Neues Jahr</p>
+                <h2>Liste duplizieren</h2>
+            </div>
+            <button id="closeDuplicateListButton" class="icon-button" aria-label="Popup schließen">×</button>
+        </div>
+        <p class="muted small-info">Übernimmt alle Häuser und Familiennamen aus der aktuellen Liste. Status, Spenden und Notizen werden standardmäßig zurückgesetzt.</p>
+        <label>Neue Liste
+            <input id="duplicateTargetName" placeholder="z.B. Florianisammlung 2027">
+        </label>
+        <label class="check-row">
+            <input id="duplicateResetValues" type="checkbox" checked>
+            Spenden, Status und Notizen zurücksetzen
+        </label>
+        <div class="modal-actions">
+            <button id="cancelDuplicateListButton" class="light-button">Abbrechen</button>
+            <button id="duplicateListButton" class="red-button">Duplizieren</button>
+        </div>
+    </div>
+</section>
+
+<section id="passwordModal" class="modal-overlay hidden" aria-label="Passwort ändern">
+    <div class="modal-card">
+        <div class="modal-head">
+            <div>
+                <p class="eyebrow">Sicherheit</p>
+                <h2>Passwort ändern</h2>
+            </div>
+            <button id="closePasswordButton" class="icon-button" aria-label="Popup schließen">×</button>
+        </div>
+        <label>Aktuelles Passwort
+            <input id="currentPasswordInput" type="password" autocomplete="current-password">
+        </label>
+        <label>Neues Passwort
+            <input id="newPasswordInput" type="password" autocomplete="new-password" placeholder="mindestens 8 Zeichen">
+        </label>
+        <p id="passwordMessage" class="login-message"></p>
+        <div class="modal-actions">
+            <button id="cancelPasswordButton" class="light-button">Abbrechen</button>
+            <button id="savePasswordButton" class="red-button">Speichern</button>
+        </div>
+    </div>
+</section>
+
+<section id="editHouseModal" class="modal-overlay hidden" aria-label="Haus bearbeiten">
+    <div class="modal-card edit-modal-card">
+        <div class="modal-head">
+            <div>
+                <p class="eyebrow">Haus bearbeiten</p>
+                <h2 id="editHouseTitle">Adresse</h2>
+            </div>
+            <button id="closeEditHouseButton" class="icon-button" aria-label="Bearbeiten schließen">×</button>
+        </div>
+        <div class="edit-grid modal-edit-grid">
+            <label>
+                Name / Familie
+                <input id="editResidentName" placeholder="z.B. Familie Muster">
+            </label>
+            <label>
+                Status
+                <select id="editStatus">
+                    <option value="OFFEN">Offen</option>
+                    <option value="SPAETER_NOCHMAL">Später nochmal</option>
+                    <option value="ERLEDIGT">Erledigt</option>
+                    <option value="UEBERSPRINGEN">Überspringen</option>
+                </select>
+            </label>
+            <label>
+                Spende €
+                <input id="editDonation" type="number" min="0" step="0.5" inputmode="decimal" placeholder="z.B. 10">
+            </label>
+            <label class="wide">
+                Notiz
+                <textarea id="editNote" placeholder="z.B. niemand zuhause"></textarea>
+            </label>
+        </div>
+        <div class="modal-actions three-actions">
+            <button id="editMapButton" class="light-button">Auf Karte zeigen</button>
+            <button id="cancelEditHouseButton" class="light-button">Abbrechen</button>
+            <button id="saveEditHouseButton" class="red-button">Speichern</button>
+        </div>
+    </div>
+</section>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="/app.js"></script>
+</body>
+</html>

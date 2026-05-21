@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>PDF-Ansicht - Floriani Tracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body class="print-page-body">
+    <main class="print-page-shell">
+        <div class="print-actions no-print">
+            <button id="printNowButton" class="red-button">Drucken / als PDF speichern</button>
+            <button id="closePrintButton" class="light-button">Schließen</button>
+        </div>
+        <section id="printContent" class="print-content">
+            <div class="empty-state">PDF-Ansicht wird geladen ...</div>
+        </section>
+    </main>
+    <script src="/print.js"></script>
+</body>
+</html>
